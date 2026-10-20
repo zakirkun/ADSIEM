@@ -148,6 +148,10 @@ class Alert(Base):
     rule_id          = Column(UUID(as_uuid=True), ForeignKey("rules.id", ondelete="SET NULL"))
     event_id         = Column(UUID(as_uuid=True))  # pointer into Elasticsearch `logs` index _id, no FK (events live in ES now)
     agent_id         = Column(UUID(as_uuid=True), ForeignKey("agents.id", ondelete="SET NULL"))
+    # Campaign case this alert was assigned to by the worker; NULL until then.
+    # Reports join on this, not on source_ip/hostname, which cannot follow a
+    # campaign across hosts or past 24h.
+    case_id          = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="SET NULL"), index=True)
     group_id         = Column(String(100), nullable=False, default="default")
     source_ip        = Column(String(45))
     hostname         = Column(String(255))

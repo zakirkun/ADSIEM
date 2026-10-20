@@ -418,6 +418,31 @@ async def _migrate_drop_alerts_event_fk() -> None:
             "ALTER TABLE alerts DROP CONSTRAINT IF EXISTS alerts_event_id_fkey"
         ))
 
+async def _migrate_alert_case_id() -> None:
+    """Add alerts.case_id and backfill it from cases.alert_id.
+
+    Before this column existed, a case only stored its single triggering alert
+    (cases.alert_id) and every other member was guessed at read time from
+    source_ip/hostname within +/-24h. Reports need the real membership so a
+    campaign that spans hosts or days is reported whole.
+    """
+    from sqlalchemy import text
+    async with engine.begin() as conn:
+        await conn.execute(text(
+            "ALTER TABLE alerts ADD COLUMN IF NOT EXISTS case_id UUID "
+            "REFERENCES cases(id) ON DELETE SET NULL"
+        ))
+        await conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_alerts_case_id ON alerts (case_id)"
+        ))
+        await conn.execute(text("""
+            UPDATE alerts a
+               SET case_id = c.id
+              FROM cases c
+             WHERE c.alert_id = a.id
+               AND a.case_id IS NULL
+        """))
+
 async def _ws_redis_listener():
     """Subscribe to Redis ws:alerts channel and broadcast to WebSocket clients."""
     import asyncio
@@ -470,6 +495,7 @@ async def lifespan(app: FastAPI):
         await _migrate_agent_enrollment_columns()
         await _migrate_rule_source_columns()
         await _migrate_drop_alerts_event_fk()
+        await _migrate_alert_case_id()
         from app.services.knowledge_schema import migrate_knowledge
         await migrate_knowledge()
         from app.services.investigator import mark_stale_interrupted

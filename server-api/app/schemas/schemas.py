@@ -779,6 +779,23 @@ class ReportGenerateRequest(BaseModel):
     date_to: date
     language: str = "English"
 
+
+class ReportRequest(BaseModel):
+    """Report scope selector. One endpoint serves all three report types.
+
+    scope="detailed" uses date_from/date_to.
+    scope="cases"    uses case_ids (one or many).
+    scope="agents"   uses agent_ids (empty = whole fleet) plus date_from/date_to.
+    """
+    scope: Literal["detailed", "cases", "agents"] = "detailed"
+    date_from: date | None = None
+    date_to: date | None = None
+    case_ids: list[UUID] = Field(default_factory=list)
+    agent_ids: list[UUID] = Field(default_factory=list)
+    format: Literal["pdf", "excel"] = "pdf"
+    include_narrative: bool = True
+    language: str = "Indonesian"
+
 # ─── Enrollment Tokens ───────────────────────────────────────────
 
 class EnrollmentTokenCreate(BaseModel):

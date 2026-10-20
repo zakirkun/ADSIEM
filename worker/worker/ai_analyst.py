@@ -522,6 +522,12 @@ async def _join_campaign_case(
         case.ioc_data = ioc
         case.severity = new_severity
         case.updated_at = datetime.now(timezone.utc)
+        try:
+            joined = await db.get(Alert, uuid.UUID(alert_id))
+            if joined is not None:
+                joined.case_id = case.id
+        except (ValueError, TypeError):
+            pass
         details = "\n".join(f"- {line}" for line in lines)
         db.add(CaseNote(
             case_id=case.id, author_id=None, is_ai_generated=True,
@@ -585,6 +591,12 @@ async def _add_to_bruteforce_digest(
         if first_time:  # a note per new source; repeats only count
             db.add(CaseNote(case_id=case.id, author_id=None, is_ai_generated=True,
                             content=f"**{source_ip}** → {hostname or 'unknown host'}: {title} ({severity})"))
+        try:
+            digest_alert = await db.get(Alert, uuid.UUID(alert_id))
+            if digest_alert is not None:
+                digest_alert.case_id = case.id
+        except (ValueError, TypeError):
+            pass
         await db.commit()
         log.info("bruteforce_digest_updated", case_id=str(case.id), source_ip=source_ip, alert_id=alert_id)
         return str(case.id)
@@ -703,6 +715,10 @@ async def _create_case_from_verdict(
         )
         db.add(case)
         await db.flush()
+        if alert_uuid is not None:
+            alert_row = await db.get(Alert, alert_uuid)
+            if alert_row is not None:
+                alert_row.case_id = case.id
 
         # Bangun note lengkap dari perspektif L1 analyst
         ti_section = ""

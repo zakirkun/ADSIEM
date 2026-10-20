@@ -82,6 +82,7 @@ class Alert(Base):
     rule_id          = Column(UUID(as_uuid=True), ForeignKey("rules.id", ondelete="SET NULL"))
     event_id         = Column(UUID(as_uuid=True))  # pointer into Elasticsearch `logs` index _id, no FK
     agent_id         = Column(UUID(as_uuid=True), ForeignKey("agents.id", ondelete="SET NULL"))
+    case_id          = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="SET NULL"))
     group_id         = Column(String(100), nullable=False, default="default")
     source_ip        = Column(String(45))
     hostname         = Column(String(255))
