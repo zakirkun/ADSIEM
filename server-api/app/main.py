@@ -1,6 +1,5 @@
 import json
 import structlog
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -88,7 +87,6 @@ _DEFAULT_SETTINGS = [
 ]
 
 async def _seed_settings() -> None:
-    from sqlalchemy import select
     from app.core.database import AsyncSessionLocal
     from app.models.models import PlatformSetting
     async with AsyncSessionLocal() as db:
@@ -442,6 +440,9 @@ async def _migrate_alert_case_id() -> None:
              WHERE c.alert_id = a.id
                AND a.case_id IS NULL
         """))
+    from app.services.alert_case_backfill import backfill_alert_case_id
+    await backfill_alert_case_id(engine)
+
 
 async def _ws_redis_listener():
     """Subscribe to Redis ws:alerts channel and broadcast to WebSocket clients."""

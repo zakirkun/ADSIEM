@@ -35,9 +35,12 @@ def env():
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             await conn.run_sync(Base.metadata.create_all)
 
-    _run(setup())
-    return SimpleEnv()
+    async def teardown():
+        await engine.dispose()
 
+    _run(setup())
+    yield SimpleEnv()
+    _run(teardown())
 
 class SimpleEnv:
     pass
