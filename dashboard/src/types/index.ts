@@ -520,3 +520,37 @@ export interface YaraRule {
   is_enabled: boolean
   created_at: string
 }
+
+export type ReportScope = 'detailed' | 'cases' | 'agents'
+export type ReportFormat = 'pdf' | 'excel'
+
+export interface ReportOptionCase {
+  id: string
+  title: string
+  severity: string
+  status: string
+  created_at: string | null
+}
+
+export interface ReportOptionAgent {
+  id: string
+  hostname: string
+  name: string
+  status: string
+}
+
+export interface ReportOptions {
+  cases: ReportOptionCase[]
+  agents: ReportOptionAgent[]
+}
+
+export interface ReportRequestPayload {
+  scope: ReportScope
+  date_from: string | null
+  date_to: string | null
+  case_ids: string[]
+  agent_ids: string[]
+  format: ReportFormat
+  include_narrative: boolean
+  language: string
+}

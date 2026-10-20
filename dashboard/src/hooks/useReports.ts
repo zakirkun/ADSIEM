@@ -1,25 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/api/client'
-
-export interface ReportOptionCase {
-  id: string
-  title: string
-  severity: string
-  status: string
-  created_at: string | null
-}
-
-export interface ReportOptionAgent {
-  id: string
-  hostname: string
-  name: string
-  status: string
-}
-
-export interface ReportOptions {
-  cases: ReportOptionCase[]
-  agents: ReportOptionAgent[]
-}
+import type { ReportOptions } from '@/types'
 
 export function useReportOptions(enabled = true) {
   return useQuery<ReportOptions>({

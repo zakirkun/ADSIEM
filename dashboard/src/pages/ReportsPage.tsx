@@ -4,13 +4,27 @@ import { format, subDays } from 'date-fns'
 import { api } from '@/api/client'
 import { useReportOptions } from '@/hooks/useReports'
 import SeverityBadge from '@/components/SeverityBadge'
+import type { ReportFormat, ReportRequestPayload, ReportScope } from '@/types'
 
 const LANGUAGES = ['Indonesian', 'English', 'Spanish', 'French', 'German', 'Japanese']
 
-type Scope = 'detailed' | 'cases' | 'agents'
-type ReportFormat = 'pdf' | 'excel'
+interface ApiErrorBody {
+  detail?: unknown
+}
 
-const SCOPES: { id: Scope; label: string; hint: string }[] = [
+function humanizeError(detail: unknown): string {
+  if (typeof detail === 'string' && detail.trim()) return detail
+  if (Array.isArray(detail)) {
+    const first = detail[0] as { msg?: string; loc?: unknown[] } | undefined
+    if (first?.msg) {
+      const field = Array.isArray(first.loc) ? first.loc[first.loc.length - 1] : undefined
+      return field ? `Data "${String(field)}" tidak valid: ${first.msg}` : first.msg
+    }
+  }
+  return 'Gagal membuat laporan. Periksa pilihan Anda lalu coba lagi.'
+}
+
+const SCOPES: { id: ReportScope; label: string; hint: string }[] = [
   {
     id: 'detailed',
     label: 'Laporan Detail Periode',
@@ -29,7 +43,7 @@ const SCOPES: { id: Scope; label: string; hint: string }[] = [
 ]
 
 export default function ReportsPage() {
-  const [scope, setScope] = useState<Scope>('detailed')
+  const [scope, setScope] = useState<ReportScope>('detailed')
   const [reportFormat, setReportFormat] = useState<ReportFormat>('pdf')
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'))
   const [dateTo, setDateTo] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -68,7 +82,7 @@ export default function ReportsPage() {
     setIsGenerating(true)
     let href: string | null = null
     try {
-      const payload = {
+      const payload: ReportRequestPayload = {
         scope,
         date_from: scope === 'cases' ? null : dateFrom,
         date_to: scope === 'cases' ? null : dateTo,
@@ -91,20 +105,18 @@ export default function ReportsPage() {
       a.download = match?.[1] ?? fallback
       a.click()
     } catch (e) {
-      const err = e as { response?: { data?: unknown } }
-      let detail = 'Gagal membuat laporan'
-      const data = err.response?.data
-      if (data instanceof Blob) {
+      const responseData = (e as { response?: { data?: unknown } }).response?.data
+      let body: ApiErrorBody = {}
+      if (responseData instanceof Blob) {
         try {
-          const parsed = JSON.parse(await data.text()) as { detail?: string }
-          if (parsed.detail) detail = parsed.detail
+          body = JSON.parse(await responseData.text()) as ApiErrorBody
         } catch {
-          detail = 'Gagal membuat laporan'
+          body = {}
         }
-      } else if (data && typeof data === 'object' && 'detail' in data) {
-        detail = String((data as { detail: unknown }).detail)
+      } else if (responseData && typeof responseData === 'object') {
+        body = responseData as ApiErrorBody
       }
-      setError(detail)
+      setError(humanizeError(body.detail))
     } finally {
       if (href) URL.revokeObjectURL(href)
       setIsGenerating(false)
